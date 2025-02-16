@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QDialog, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QFileDialog, QScrollArea, QSizePolicy, QLayout, QLayoutItem, QSpacerItem
-from PyQt6.QtGui import QFont
-from PyQt6.QtCore import Qt, QEvent, QObject, QTimer
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QDialog, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QFileDialog, QScrollArea, QSizePolicy, QLayout, QLayoutItem, QSpacerItem, QSystemTrayIcon, QStyle, QFrame
+from PyQt6.QtGui import QFont, QPalette, QColor
+from PyQt6.QtCore import Qt, QEvent, QObject, QTimer, QPropertyAnimation, QPoint
 from pathlib import Path
 #from web_client.client import Client
 
@@ -194,6 +194,32 @@ class ChatApp(QWidget):
         self.init_ui()
         #self.add_test_messages()  # Add some test messages to verify the functionality
         self.init_web_client() #  Set up the Web Client
+
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
+        self.tray_icon.setVisible(True)
+
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
+        self.tray_icon.setVisible(True)
+
+        # Initialize popup label
+        self.popup_label = QLabel(self)
+        self.popup_label.setStyleSheet("""
+            QLabel {
+                background-color: #4C566A;
+                color: #ECEFF4;
+                border: 1px solid #88C0D0;
+                padding: 10px;
+                border-radius: 5px;
+            }
+        """)
+        self.popup_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.popup_label.setVisible(False)
+
+        # Animation for popup label
+        self.popup_animation = QPropertyAnimation(self.popup_label, b"pos")
+        self.popup_animation.setDuration(500)
 
         
     def closeEvent(self, a0):
@@ -445,7 +471,47 @@ class ChatApp(QWidget):
             self.add_new_chat(sender_name, None)
 
         self.add_message_to_chat(sender, message, sender_name)
-        #self.display_chat(sender)
+        
+        # Show notification if sender is a saved contact
+        if sender in self.test_users:
+            self.show_notification(sender_name, message)
+            self.show_popup_message(sender_name, message)
+
+    def show_notification(self, sender_name, message):
+        """
+        Shows a system tray notification with the sender's name and the first part of the message.
+        """
+        truncated_message = message[:50] + "..." if len(message) > 50 else message
+        self.tray_icon.showMessage(f"New message from {sender_name}", truncated_message, QSystemTrayIcon.MessageIcon.Information)
+
+    def show_popup_message(self, sender_name, message):
+        """
+        Shows a popup message in the upper right corner of the window.
+        """
+        truncated_message = message[:50] + "..." if len(message) > 50 else message
+        self.popup_label.setText(f"New message from {sender_name}: {truncated_message}")
+        self.popup_label.adjustSize()
+
+        # Position the popup label in the upper right corner
+        start_pos = QPoint(self.width() - self.popup_label.width() - 20, 20)
+        end_pos = QPoint(self.width() - self.popup_label.width() - 20, 20)
+
+        self.popup_label.move(start_pos)
+        self.popup_label.setVisible(True)
+
+        # Animate the popup label
+        self.popup_animation.setStartValue(start_pos)
+        self.popup_animation.setEndValue(end_pos)
+        self.popup_animation.start()
+
+        # Hide the popup after a delay
+        QTimer.singleShot(3000, self.hide_popup_message)
+
+    def hide_popup_message(self):
+        """
+        Hides the popup message.
+        """
+        self.popup_label.setVisible(False)
 
     def on_user_selected(self, user: public_key.PublicKey):
         """
