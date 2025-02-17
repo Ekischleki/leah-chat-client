@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QDialog, QLabel,
 from PyQt6.QtGui import QFont, QPalette, QColor
 from PyQt6.QtCore import Qt, QEvent, QObject, QTimer, QPropertyAnimation, QPoint
 from pathlib import Path
+from PyQt6.QtMultimedia import QSoundEffect
+from PyQt6.QtCore import QUrl
 #from web_client.client import Client
 
 import sys
@@ -216,10 +218,16 @@ class ChatApp(QWidget):
         """)
         self.popup_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.popup_label.setVisible(False)
+        self.popup_label.mousePressEvent = self.on_popup_click  # Connect click event
 
         # Animation for popup label
         self.popup_animation = QPropertyAnimation(self.popup_label, b"pos")
-        self.popup_animation.setDuration(500)
+        self.popup_animation.setDuration(1000)
+
+        self.popup_sender = None  # Store the sender of the popup message
+
+        self.sound_effect = QSoundEffect()
+        self.sound_effect.setSource(QUrl.fromLocalFile("sound/msg_received.wav"))
 
         
     def closeEvent(self, a0):
@@ -474,15 +482,9 @@ class ChatApp(QWidget):
         
         # Show notification if sender is a saved contact
         if sender in self.test_users:
-            self.show_notification(sender_name, message)
-            self.show_popup_message(sender_name, message)
-
-    def show_notification(self, sender_name, message):
-        """
-        Shows a system tray notification with the sender's name and the first part of the message.
-        """
-        truncated_message = message[:50] + "..." if len(message) > 50 else message
-        self.tray_icon.showMessage(f"New message from {sender_name}", truncated_message, QSystemTrayIcon.MessageIcon.Information)
+            #self.show_notification(sender_name, message) # windows message from python
+            self.show_popup_message(sender_name, message) # pop up in the GUI
+            self.sound_effect.play()
 
     def show_popup_message(self, sender_name, message):
         """
@@ -507,11 +509,25 @@ class ChatApp(QWidget):
         # Hide the popup after a delay
         QTimer.singleShot(3000, self.hide_popup_message)
 
+        # Store the sender for the popup click event
+        self.popup_sender = sender_name
+
+    def on_popup_click(self, event):
+        """
+        Opens the chat with the sender when the popup message is clicked.
+        """
+        if self.popup_sender:
+            for user in self.test_users:
+                if self.client_backend.get_key_name(user) == self.popup_sender:
+                    self.on_user_selected(user)
+                    break
+
     def hide_popup_message(self):
         """
         Hides the popup message.
         """
         self.popup_label.setVisible(False)
+
 
     def on_user_selected(self, user: public_key.PublicKey):
         """
