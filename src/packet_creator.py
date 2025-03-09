@@ -80,6 +80,22 @@ def create_direct_message(receiver, message: bytes, hash: str, sender: str, nonc
     }
     return as_bytes(body)
 
+def create_fwien_message(code: str):
+    body = create_broadcast_message()
+    body["inner"] = {
+        "type": "FWIEN",
+        "code": code,
+    }
+    return as_bytes(body)
+
+def create_code_message(public_key: str, code: str):
+    body = create_broadcast_message()
+    body["inner"] = {
+        "type": "CODE",
+        "code": code,
+        "public_key": public_key
+    }
+    return as_bytes(body)
 
 def create_exchange_message(key: str, sender: str, sig: str, receiver: str):
     body = create_directed_message(receiver)

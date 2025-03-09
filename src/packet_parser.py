@@ -52,6 +52,14 @@ def execute_broadcast_message(dic: dict, client: ClientState):
         case "WANTSNAME":
             requested = dic["name"]
             client.other_wants(requested)
+        case "FWIEN":
+            code = dic["code"]
+            client.received_fwien(code)
+        case "CODE":
+            code = dic["code"]
+            public_key = dic["public_key"]
+            client.received_code(code, public_key)
+
 
 def execute_directed_message(dic: dict, client: ClientState):
     type = dic["type"]
@@ -98,6 +106,8 @@ def valid_head(io_stream: io.BytesIO) -> bool:
     if client_specifics != 0:
         return False
     return True
+
+
 
 def parse_packet(io_stream: io.BytesIO, client: ClientState) -> None | BaseMessage:
     """Parses a packet from an io_stream. This includes head and body, and then calls the client interface with the appropriate package."""

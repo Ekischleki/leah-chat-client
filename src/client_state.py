@@ -4,9 +4,11 @@ from . import crypto
 from . import client_socket
 from . import packet_creator
 from . import user_config
+from . import friend_code
 import base64
 import json
 import copy
+import time
 
 class Message:
     def __init__(self, message: str, sent_by_self: bool):
@@ -59,9 +61,32 @@ def __state_from_json__(dict: dict) -> ChatState:
 
 IP = '87.106.163.101'
 PORT = 12345
-        
 
 class ClientState:
+
+    def received_fwien(self, code: str):
+        if code != self.get_own_friend_code(False):
+            return
+        message_packet = packet_creator.create_code_message(self.public_key.as_base64_string(), code)
+        self.client_socket.send(message_packet)
+
+    def received_code(self, code: str, key: public_key.PublicKey):
+        matching_awaiting_codes = [t for i, t in enumerate(self.awaiting_friend_codes) if t[0] == code]
+        if len(matching_awaiting_codes) == 0:
+            return
+        print(f"Received public key for awaiting friend code! {key}")
+        if not friend_code.is_matching_friend_key(key, code):
+            print(f"We've been bamboozled. The public key and code don't match")
+
+    def get_own_friend_code(self, display_to_user: bool):
+        return friend_code.get_friend_code(self.public_key, display_to_user)
+    
+    def load_friend_code(self, code: str) -> bool:
+        code_bytes = friend_code.decode_unambiguous_base64(code)
+        message_packet = packet_creator.create_fwien_message(code_bytes)
+        self.awaiting_friend_codes.append((code, time.time()))
+        self.client_socket.send(message_packet)
+
 
     def write_to_save(self):
         config = user_config.load_config()
@@ -77,6 +102,8 @@ class ClientState:
         self.display_name = display_name
         self.msg_received_callback = received_callback
         self.message_queue = []
+        self.awaiting_friend_codes = []
+        self.known_codes = {}
 
     
     def send_message(self, chat: public_key.PublicKey, message: str):
@@ -180,9 +207,11 @@ class ClientState:
             print("Sig invalid " + public_key.as_base64_string() + "\nSig:" + signature.to_base64())
             return
         self.discovered_clients[public_key] = name
-        print("Discovered: " + name)
         if public_key in self.chats:
+            print("Discovered: " + name)
             self.chats[public_key].display_name = name
+            key_friend_code = friend_code.get_friend_code_bytes(public_key)
+            self.known_codes[key_friend_code] = public_key
     
 
 

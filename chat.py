@@ -5,6 +5,7 @@ from src import chat_app
 from src import user_config
 from src import client_state
 from src import client_poller
+from src import packet_creator
 import time
 
 def msg_received(self, message, sender):
@@ -49,7 +50,6 @@ client = chat_app.load_or_new_client(username, lambda: ())
 
 print("----- Client Loaded -----")
 i = 0
-
 while i < len(args):
     arg = args[i]
     remain = len(args) - i - 1
@@ -63,6 +63,12 @@ while i < len(args):
         case "--scan":
             print("-- Scanning for Clients --")
             search_clients(client)
+        case "-f":
+            print(f"Your friend code: {client.get_own_friend_code(True)}")
+        case "-c":
+            s = packet_creator.create_head()
+            s.write("Faulty packet\n".encode("utf-8"))
+            client.client_socket.send(s.getvalue())
         case _:
             print(f"Unknown option: {arg}")
 
