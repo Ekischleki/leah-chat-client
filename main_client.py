@@ -5,8 +5,7 @@ from PyQt6.QtWidgets import QApplication
 import sys
 import io
 
-app = QApplication(sys.argv)  # Initialize the application
 window = chat_app.ChatApp()            # Create the main chat window
 
 window.show()                 # Show the GUI
-sys.exit(app.exec())          # Start the application event loop
+sys.exit(chat_app.APP.exec())          # Start the application event loop

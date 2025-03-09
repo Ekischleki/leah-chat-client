@@ -87,8 +87,9 @@ def valid_head(io_stream: io.BytesIO) -> bool:
     """
     Reads the head of the iostream, and returns whether or not it matches with the supported version
     """
-    magic_number = io_stream.read(1)[0]
-    if magic_number != 69:
+    magic_number = io_stream.read(1)
+
+    if len(magic_number) != 1 or magic_number[0] != 69:
         return False
     protocol_version = io_stream.read(1)[0]
     if protocol_version != current_protocol_version:

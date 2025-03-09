@@ -7,6 +7,3 @@ def filter_new_message(msg):
         return "Message was deleted, because of inappropriate content"
     else:
         return msg
-    
-msg = "hi"
-print(filter_new_message(msg))

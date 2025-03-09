@@ -21,6 +21,27 @@ from . blocking import check_blocked, block, unblock
 from . client_state import ClientState, load_or_new_client, ChatState
 from . import user_config
 
+APP = QApplication(sys.argv)  # Initialize the application
+
+
+def load_or_create_username() -> str:
+    """Loads the username from the user.txt JSON file."""
+
+    config = user_config.load_config()
+
+    if "username" in config:
+        username = config["username"]
+    else:
+        # Prompt user to enter new username.
+        new_user_popup = LoginPopup()
+        new_user_popup.exec()
+        # This is a very bad hack.
+        config = user_config.load_config()
+        username = config["username"]
+
+    print("Found Username: " + username)
+    return username
+
 #-------------------- CLASSES --------------------
 #Define Login Popup here
 class LoginPopup(QDialog):
@@ -178,7 +199,7 @@ class ChatApp(QWidget):
 
         user_config.ensure_exists()
 
-        self.load_or_create_username()
+        self.username = load_or_create_username()
 
         # ---------- New Chat System Setup ----------
 
@@ -202,7 +223,7 @@ class ChatApp(QWidget):
 
     def update_frame(self):
         for sender, message in self.client_backend.message_queue:
-            self.msg_recieved(sender, message)
+            self.msg_received(sender, message)
         
         self.client_backend.message_queue.clear()
 
@@ -210,30 +231,13 @@ class ChatApp(QWidget):
         print("Starting Web Client Connection...")
         #self.web_client = Client("192.168.176.160", 12345, on_message_received=self.msg_recieved)
         # Init client_state here
-        self.client_backend = load_or_new_client(self.username, self.msg_recieved)
+        self.client_backend = load_or_new_client(self.username, self.msg_received)
 
         self.recreate_chat_buttons()
 
         #init poller
         self.poller_thread = WorkerThread(self.client_backend)
         self.poller_thread.start_task()
-
-    def load_or_create_username(self):
-        """Loads the username from the user.txt JSON file."""
-
-        config = user_config.load_config()
-
-        if "username" in config:
-            self.username = config["username"]
-        else:
-            # Prompt user to enter new username.
-            new_user_popup = LoginPopup()
-            new_user_popup.exec()
-            # This is a very bad hack.
-            config = user_config.load_config()
-            self.username = config["username"]
-
-        print("Found Username: " + self.username)
 
     def on_top_right_button_click(self):
         if not self.current_chat:
@@ -432,7 +436,7 @@ class ChatApp(QWidget):
 
 
 
-    def msg_recieved(self, message, sender):
+    def msg_received(self, message, sender):
         """
         Called when a new message is received.
         Creates a new label in the chat message area.
@@ -712,4 +716,6 @@ class ChatApp(QWidget):
         
         # Return File Bytes
         return file_bytes.decode('utf-8')
+
+
 
